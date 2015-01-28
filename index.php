@@ -44,7 +44,6 @@ $l1[] = ' ';
 ############## END: generate array containing a-z, 0-9 and ' '[space]######
 
 $seed = 'aaa';
-$progress=0;
 recurGenerateQueryString($seed, $l1, $ch, $memcache_obj);
 echo $errors;
 curl_close($ch);
@@ -68,8 +67,10 @@ function getPlaces($query, $ch) {
 }
 
 function recurGenerateQueryString($str, $l1, $ch, $memcache_obj) {
-    if ( strlen($str)-strlen($GLOBALS['seed']) >= 2) {
-        $memcache_obj->set('status', ++$GLOBALS['progress'], MEMCACHE_COMPRESSED, 100);
+    if (strlen($str) - strlen($GLOBALS['seed']) == 1) {
+        $progress = (array_search($str[strlen($str) - 2], $l1) * 37) + array_search($str[strlen($str) - 1], $l1);
+        echo "----$progress-----";
+        $memcache_obj->set('status', $progress, MEMCACHE_COMPRESSED, 100);
     }
 
     $memcache_obj->set('currentQS', $str, MEMCACHE_COMPRESSED, 100);
