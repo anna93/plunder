@@ -1,28 +1,35 @@
-<!DOCTYPE html>
-<!--
-Author: Shekhar Joshi
-Country: India
--->
-
-
 <?php
+
+/**
+ * Author: Shekhar Joshi
+ * Country: India
+
+ * Licensed under MIT license http://opensource.org/licenses/MIT
+ * */
 register_shutdown_function('shutdownFunction');
 
 function shutDownFunction() {
     $error = error_get_last();
     echo $error['message'] . '<br/>';
-    echo $GLOBALS['count'];
     if ($error['type'] == 1) {
         //do your stuff     
     }
 }
 
-$count = 0;
 ini_set('memory_limit', '-1');
 set_time_limit(30000);
-$ch = curl_init();
-echo '<pre>';
 
+
+$memcache_obj = new Memcache;
+$memcache_obj->connect('localhost', 11211);
+$errors = 0;
+
+
+$ch = curl_init();
+
+// l1 stands for level1, it contains all the characters which may be required to
+// generate all query strings. 
+############## START: generate array containing a-z, 0-9 and ' '[space]######
 for ($char = 'a';;) {
     $l1[] = $char;
     if ($char == 'z') {
@@ -34,55 +41,58 @@ for ($char = 'a';;) {
     $char++;
 }
 $l1[] = ' ';
+############## END: generate array containing a-z, 0-9 and ' '[space]######
 
-dummy('a', $l1, $ch);
-echo $count . '<br/>';
-
+$seed = 'aaa';
+$progress=0;
+recurGenerateQueryString($seed, $l1, $ch, $memcache_obj);
+echo $errors;
 curl_close($ch);
 ?>
 
+
 <?php
 
-function getCity($query, $ch) {
-    $GLOBALS['count'] ++;
+function getPlaces($query, $ch) {
     $url = "http://autocomplete.wunderground.com/aq?=jQuery17209440772472339225_1421813297012&query=" . $query . "&h=1&_=1421813470121";
-    //echo $url."<br>";
+
     curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_HEADER, 0);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     $res = curl_exec($ch);
-    return json_decode($res)->RESULTS;
-    //return ([0,1,2,3,4,5,6,7,8,8,88,5,5,5,5,5,5,5,5,5,5]);
+
+    $jsonRes = json_decode($res);
+    if (is_object($jsonRes))
+        return $jsonRes->RESULTS;
+    $GLOBALS['errors'] ++;
 }
 
-function dummy($str, $l1, $ch) {
-    //echo $str . "<br>";
-    $res = getCity($str, $ch);
-    //echo count($res)."<br>";
-    //exit();
+function recurGenerateQueryString($str, $l1, $ch, $memcache_obj) {
+    if ( strlen($str)-strlen($GLOBALS['seed']) >= 2) {
+        $memcache_obj->set('status', ++$GLOBALS['progress'], MEMCACHE_COMPRESSED, 100);
+    }
+
+    $memcache_obj->set('currentQS', $str, MEMCACHE_COMPRESSED, 100);
+
+    $res = getPlaces($str, $ch);
+
     if (count($res) < 20) {
         if (count($res) > 0) {
-            //echo '---------------------------------<br/>';
             foreach ($res as $r) {
-                //echo "<br/>";
                 echo $r->name . "<br>";
             }
-            //echo '---------------------------------<br/>';
         }
     } else {
         foreach ($l1 as $t) {
             if (substr($str, -1) == ' ' && $t == ' ') {
                 break;
-                //return;
             }
-
             $tempStr = $str . $t;
-            if ($tempStr == 'ab') {
-                echo "$tempStr<br/>Salvation!<br/>";
-                break;
-            }
+//            if ($tempStr == 'aaz') {
+//                break;
+//            }
 
-            dummy($tempStr, $l1, $ch);
+            recurGenerateQueryString($tempStr, $l1, $ch, $memcache_obj);
         }
     }
 }
