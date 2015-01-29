@@ -10,6 +10,6 @@
 $memcache_obj = new Memcache;
 $memcache_obj->connect('localhost', 11211);
 
-echo json_encode(array('currentQS' => $memcache_obj->get('currentQS'),
-    'status' => $memcache_obj->get('status')));
+echo json_encode(array('currentQS' => $memcache_obj->get($_GET['id'].'currentQS'),
+    'status' => $memcache_obj->get($_GET['id'].'status')));
 

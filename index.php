@@ -19,13 +19,15 @@ function shutDownFunction() {
 ini_set('memory_limit', '-1');
 set_time_limit(30000);
 
+$ch = curl_init();
 
 $memcache_obj = new Memcache;
 $memcache_obj->connect('localhost', 11211);
 $errors = 0;
+$memcache_obj->set($_GET['id'].'status', 0, MEMCACHE_COMPRESSED, 100);
+$memcache_obj->set($_GET['id'].'currentQS', "-", MEMCACHE_COMPRESSED, 100);
 
 
-$ch = curl_init();
 
 // l1 stands for level1, it contains all the characters which may be required to
 // generate all query strings. 
@@ -43,7 +45,7 @@ for ($char = 'a';;) {
 $l1[] = ' ';
 ############## END: generate array containing a-z, 0-9 and ' '[space]######
 
-$seed = 'aaa';
+$seed = 'aa';
 recurGenerateQueryString($seed, $l1, $ch, $memcache_obj);
 echo $errors;
 curl_close($ch);
@@ -67,13 +69,12 @@ function getPlaces($query, $ch) {
 }
 
 function recurGenerateQueryString($str, $l1, $ch, $memcache_obj) {
-    if (strlen($str) - strlen($GLOBALS['seed']) == 1) {
-        $progress = (array_search($str[strlen($str) - 2], $l1) * 37) + array_search($str[strlen($str) - 1], $l1);
-        echo "----$progress-----";
-        $memcache_obj->set('status', $progress, MEMCACHE_COMPRESSED, 100);
+    if (strlen($str) - strlen($GLOBALS['seed']) >= 1) {
+        $progress = array_search($str[strlen($GLOBALS['seed'])], $l1);
+        $memcache_obj->set($_GET['id'].'status', $progress, MEMCACHE_COMPRESSED, 100);
     }
 
-    $memcache_obj->set('currentQS', $str, MEMCACHE_COMPRESSED, 100);
+    $memcache_obj->set($_GET['id'].'currentQS', $str, MEMCACHE_COMPRESSED, 100);
 
     $res = getPlaces($str, $ch);
 
