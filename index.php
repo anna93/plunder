@@ -6,6 +6,8 @@
 
  * Licensed under MIT license http://opensource.org/licenses/MIT
  * */
+
+#########START: Shutdoen function definition##########
 register_shutdown_function('shutdownFunction');
 
 function shutDownFunction() {
@@ -15,20 +17,23 @@ function shutDownFunction() {
         //do your stuff     
     }
 }
+#########END: Shutdoen function definition##########
+
 
 ini_set('memory_limit', '-1');
 set_time_limit(30000);
 
-$ch = curl_init();
 
+##################START: Memcahe Init#########
 $memcache_obj = new Memcache;
 $memcache_obj->connect('localhost', 11211);
 $errors = 0;
 $memcache_obj->set($_GET['id'].'status', 0, MEMCACHE_COMPRESSED, 100);
 $memcache_obj->set($_GET['id'].'currentQS', "-", MEMCACHE_COMPRESSED, 100);
+##################END: Memcahe Init#########
 
 
-
+$ch = curl_init();
 // l1 stands for level1, it contains all the characters which may be required to
 // generate all query strings. 
 ############## START: generate array containing a-z, 0-9 and ' '[space]######
