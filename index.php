@@ -102,7 +102,7 @@ function recurGenerateQueryString($str, $l1, $ch, $memcache_obj, $insertStatemen
         if (count($res) > 0) {
             foreach ($res as $r) {
                 $insertStatement->execute(array($r->name,$r->type, $r->c, $r->ll));
-                echo $r->ll . "<br>";
+                echo $r->name . "<br>";
             }
         }
     } else {
