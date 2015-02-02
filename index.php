@@ -6,7 +6,6 @@
 
  * Licensed under MIT license http://opensource.org/licenses/MIT
  * */
-
 #########START: Shutdoen function definition##########
 register_shutdown_function('shutdownFunction');
 
@@ -17,6 +16,7 @@ function shutDownFunction() {
         //do your stuff     
     }
 }
+
 #########END: Shutdoen function definition##########
 
 
@@ -28,10 +28,25 @@ set_time_limit(30000);
 $memcache_obj = new Memcache;
 $memcache_obj->connect('localhost', 11211);
 $errors = 0;
-$memcache_obj->set($_GET['id'].'status', 0, MEMCACHE_COMPRESSED, 100);
-$memcache_obj->set($_GET['id'].'currentQS', "-", MEMCACHE_COMPRESSED, 100);
+$memcache_obj->set($_GET['id'] . 'status', 0, MEMCACHE_COMPRESSED, 100);
+$memcache_obj->set($_GET['id'] . 'currentQS', "-", MEMCACHE_COMPRESSED, 100);
 ##################END: Memcahe Init#########
+##################START: Databased Support##############
+$host = 'localhost';
+$dbname = 'places';
+$username = "root";
+$pass = "";
 
+$conn = new PDO("mysql:host=$host;dbname=$dbname", $username, $pass);
+$table = substr($_GET['qs'], 0, 1);
+$stmt = $conn->prepare("create table if not exists $table (id int primary key auto_increment, NAME VARCHAR(50),type varchar(30), country VARCHAR(10), latlong VARCHAR(30), unique(name,latlong))");
+$stmt->execute();
+$insertStatement = $conn->prepare("INSERT IGNORE INTO $table
+        SET NAME = ?,
+        type = ?,
+        country = ?,
+        latlong = ?");
+##################END: Databased Support##############
 
 $ch = curl_init();
 // l1 stands for level1, it contains all the characters which may be required to
@@ -51,7 +66,7 @@ $l1[] = ' ';
 ############## END: generate array containing a-z, 0-9 and ' '[space]######
 
 $seed = $_GET['qs'];
-recurGenerateQueryString($seed, $l1, $ch, $memcache_obj);
+recurGenerateQueryString($seed, $l1, $ch, $memcache_obj, $insertStatement);
 echo $errors;
 curl_close($ch);
 ?>
@@ -73,20 +88,21 @@ function getPlaces($query, $ch) {
     $GLOBALS['errors'] ++;
 }
 
-function recurGenerateQueryString($str, $l1, $ch, $memcache_obj) {
+function recurGenerateQueryString($str, $l1, $ch, $memcache_obj, $insertStatement) {
     if (strlen($str) - strlen($GLOBALS['seed']) >= 1) {
         $progress = array_search($str[strlen($GLOBALS['seed'])], $l1);
-        $memcache_obj->set($_GET['id'].'status', $progress, MEMCACHE_COMPRESSED, 100);
+        $memcache_obj->set($_GET['id'] . 'status', $progress, MEMCACHE_COMPRESSED, 100);
     }
 
-    $memcache_obj->set($_GET['id'].'currentQS', $str, MEMCACHE_COMPRESSED, 100);
+    $memcache_obj->set($_GET['id'] . 'currentQS', $str, MEMCACHE_COMPRESSED, 100);
 
     $res = getPlaces($str, $ch);
 
     if (count($res) < 20) {
         if (count($res) > 0) {
             foreach ($res as $r) {
-                echo $r->name . "<br>";
+                $insertStatement->execute(array($r->name,$r->type, $r->c, $r->ll));
+                echo $r->ll . "<br>";
             }
         }
     } else {
@@ -99,7 +115,7 @@ function recurGenerateQueryString($str, $l1, $ch, $memcache_obj) {
 //                break;
 //            }
 
-            recurGenerateQueryString($tempStr, $l1, $ch, $memcache_obj);
+            recurGenerateQueryString($tempStr, $l1, $ch, $memcache_obj, $insertStatement);
         }
     }
 }
