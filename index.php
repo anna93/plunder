@@ -45,7 +45,7 @@ for ($char = 'a';;) {
 $l1[] = ' ';
 ############## END: generate array containing a-z, 0-9 and ' '[space]######
 
-$seed = 'aa';
+$seed = $_GET['qs'];
 recurGenerateQueryString($seed, $l1, $ch, $memcache_obj);
 echo $errors;
 curl_close($ch);
